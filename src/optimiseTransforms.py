@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 from scipy.optimize import least_squares
 import rospy
+from std_msgs.msg import String
 import tf
 import numpy as np
 import math
 from numpy import linalg as LA
 from numpy import *
 from tf import transformations as TR
-targetLength =100
+targetLength =200
+
+buffersFilled = 0
+preCalibration = True
+roughCalibrate = True
+i = 0
+listFull = False
 
 holoTransformList = np.zeros((targetLength,4,4))
 inverseholoTransformList = np.zeros((targetLength,4,4))
@@ -16,9 +23,11 @@ worldTransformStack = np.zeros((targetLength,4,4))
 offsetTransformStack = np.zeros((targetLength,4,4))
 markerTranslations = np.zeros( (targetLength,3) )
 holoTranslations = np.zeros( (targetLength,3) )
-
+roughCalibrate = True
 worldTransform = np.zeros((4,4))
 offsetTransform = np.zeros((4,4))
+
+speechPub = rospy.Publisher('speech', String, queue_size=10)
 
 # returns a translation and rotation that best aligns constallations A and B
 ######################## This code was shamelessly borrowed from http://nghiaho.com/uploads/code/rigid_transform_3D.py_
@@ -118,23 +127,85 @@ def costFun(x):
     right =  np.matmul(inverseholoTransformList,InvWorldTransformStack)
     difference = np.matmul( left,right)
 
-    #if the diagonal is close to an Identity then we know that the rotations is good.
+    ##if the diagonal is close to an Identity then we know that the rotations is good.
+    #myIdentity = np.identity(4)
+    #stackI  = tile(myIdentity,(arrSize,1)).reshape((arrSize,4,4))
+    #justDiagonals =  stackI * difference
+
+    ##extract just the distance cost
+    #difference = np.absolute(difference)
+    #edge = [[0,0,0,1],[0,0,0,1],[0,0,0,1],[0,0,0,0]]
+    #stackE  = tile(edge,(arrSize,1)).reshape((arrSize,4,4))
+    #justEdge = stackE * difference
+
+    ##calculate Costs, will be 0 if everything lines up.
+    #angleCost = 4 - np.sum(justDiagonals, axis=(1,2))
+    #edgeCost = np.sum(justEdge,axis=(1,2))
+
+    #return edgeCost + angleCost
     myIdentity = np.identity(4)
     stackI  = tile(myIdentity,(arrSize,1)).reshape((arrSize,4,4))
-    justDiagonals =  stackI * difference
+    difference = difference - stackI
+    difference = np.absolute(difference) #this whole vector should now be minimised to 0
 
-    #extract just the distance cost
-    difference = np.absolute(difference)
-    edge = [[0,0,0,1],[0,0,0,1],[0,0,0,1],[0,0,0,0]]
-    stackE  = tile(edge,(arrSize,1)).reshape((arrSize,4,4))
-    justEdge = stackE * difference
+    return difference.flatten()
 
-    #calculate Costs, will be 0 if everything lines up.
-    angleCost = 4 - np.sum(justDiagonals, axis=(1,2))
-    edgeCost = np.sum(justEdge,axis=(1,2))
+def costFun6(x):
 
-    return edgeCost + angleCost
+    global holoTransformList
+    global markerTransformList
+    global worldTransform
+    global offsetTransform
+    global inverseholoTransformList
 
+    arrSize = holoTransformList.shape[0]
+    residuals = np.zeros(arrSize)
+
+    #parse input vector into meaningful quantities
+    xworldT = x[0:3]
+    xworldR = x[3:6]
+    xworldRQ = TR.quaternion_about_axis(np.sqrt(xworldR.dot(xworldR)),xworldR)
+
+
+    #calculate world transform to use.
+    worldIncrement = TR.compose_matrix(translate = xworldT, angles = TR.euler_from_quaternion(xworldRQ))
+    localworldTransform = np.dot(worldIncrement,worldTransform)
+    localworldTransformInverse = TR.inverse_matrix(localworldTransform)
+
+    #calculat the offsetTransform to use.
+    localoffsetTransform = offsetTransform
+
+    # tile these into a repeating stack.
+    InvWorldTransformStack = tile(localworldTransformInverse,(arrSize,1)).reshape((arrSize,4,4))
+    offsetTransformStack = tile(localoffsetTransform,(arrSize,1)).reshape((arrSize,4,4))
+
+    #find stack of errors.
+    left = np.matmul(markerTransformList,offsetTransformStack)
+    right =  np.matmul(inverseholoTransformList,InvWorldTransformStack)
+    difference = np.matmul( left,right)
+
+    ##if the diagonal is close to an Identity then we know that the rotations is good.
+    #myIdentity = np.identity(4)
+    #stackI  = tile(myIdentity,(arrSize,1)).reshape((arrSize,4,4))
+    #justDiagonals =  stackI * difference
+
+    ##extract just the distance cost
+    #difference = np.absolute(difference)
+    #edge = [[0,0,0,1],[0,0,0,1],[0,0,0,1],[0,0,0,0]]
+    #stackE  = tile(edge,(arrSize,1)).reshape((arrSize,4,4))
+    #justEdge = stackE * difference
+
+    ##calculate Costs, will be 0 if everything lines up.
+    #angleCost = 4 - np.sum(justDiagonals, axis=(1,2))
+    #edgeCost = np.sum(justEdge,axis=(1,2))
+
+    #return edgeCost + angleCost
+    myIdentity = np.identity(4)
+    stackI  = tile(myIdentity,(arrSize,1)).reshape((arrSize,4,4))
+    difference = difference - stackI
+    difference = np.absolute(difference) #this whole vector should now be minimised to 0
+
+    return difference.flatten()
 
 def updateStoredTransforms(update):
     global holoTransformList
@@ -160,6 +231,38 @@ def updateStoredTransforms(update):
     offsetIncrement =  TR.compose_matrix(translate = xoffsetT, angles = TR.euler_from_quaternion(xoffsetRQ))
     offsetTransform = np.dot(offsetIncrement,offsetTransform)
 
+def updateStoredTransforms6(update):
+    global holoTransformList
+    global markerTransformList
+    global worldTransform
+    global offsetTransform
+
+    arrSize = holoTransformList.shape[0]
+
+    #parse input into meaningful values
+    xworldT =update[0:3]
+    xworldR = update[3:6]
+    xworldRQ = TR.quaternion_about_axis(np.sqrt(xworldR.dot(xworldR)),xworldR)
+
+    #update world transform
+    worldIncrement = TR.compose_matrix(translate = xworldT, angles = TR.euler_from_quaternion(xworldRQ))
+    worldTransform = np.dot(worldIncrement,worldTransform)
+
+
+def reCalCB(data):
+    global preCalibration
+    global i
+    global buffersFilled
+    global roughCalibrate
+    global listFull
+    global speechPub
+    print 'calibrate'
+    i = 0
+    buffersFilled = 0
+    preCalibration = True
+    roughCalibrate = True
+    listFull = False
+    speechPub.publish('started Calibration')
 
 def holoSolve():
 
@@ -172,27 +275,46 @@ def holoSolve():
     global markerRotList
     global worldTransform
     global offsetTransform
+    global buffersFilled
+    global roughCalibrate
+    global preCalibration
+    global i
+    global listFull
+    global speechPub
 
     #ros related variables
     rospy.init_node('optimiseHolo', anonymous=True)
     listener = tf.TransformListener()
     br = tf.TransformBroadcaster()
     rate = rospy.Rate(100)
+    rospy.Subscriber("reCalibrate", String, reCalCB)
+    speechPub = rospy.Publisher('speech', String, queue_size=10)
+
 
     #State holding variables
     preCalibration = True
+    roughCalibrate = True
     listFull = False
     holoSaved = np.zeros((3))
     i = 0;
 
     while not rospy.is_shutdown():
         try:
-
+            #if preCalibration:
+                #print 'precal'
+            #else:
+                #print 'notCal'
             #get holoLens reported position
             timeMC = listener.getLatestCommonTime('/holoLens', '/holoMC')
             (holoTrans,holoRot) = listener.lookupTransform('/mocha_world', '/holoLens',timeMC)
-            if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.05:
-                raise NameError('Too close')
+
+            # only when we are doing the precal and rough cal do we need the transforms to be adequately separated.
+            if buffersFilled <2:
+                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.05:
+                    raise NameError('Too close')
+            else:
+                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.01:
+                    raise NameError('Too close')
             holoSaved = holoTrans
 
             #this is the collection of one sample of the marker position as reported by the motion capture.
@@ -210,6 +332,8 @@ def holoSolve():
             i = i%targetLength
             if i == 0:
                 listFull = True
+                buffersFilled = buffersFilled + 1
+                print 'listfull'
 
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception, NameError):
@@ -219,7 +343,7 @@ def holoSolve():
             print i
             # are we ready to perform the preCal?
             if listFull:
-
+                print 'svd calibration'
                 #make an initial guess at world trans and Rot using SVD matching using the position vectors only.
                 (worldRot,worldTrans) =  rigid_transform_3D(holoTranslations,markerTranslations)
                 worldRot4 = np.identity(4)
@@ -234,16 +358,31 @@ def holoSolve():
 
         #Here we have calculated the precalibration and will now calculate the error between the transforms using a solver.
         else:
+            #full 12 degrees of freedom as marker offset is still not known
+            if buffersFilled == 1 and roughCalibrate:
+                print '12DoF calibration'
+                roughCalibrate = False
+                # initial value for solver. 12 values representing the worldTrans, worldRot, markerOffset, markerRot
+                Xinit = np.array([0,0,0,0,0,0,0,0,0,0,0,0])
 
-            # initial value for solver. 12 values representing the worldTrans, worldRot, markerOffset, markerRot
-            Xinit = np.array([0,0,0,0,0,0,0,0,0,0,0,0])
+                # The main solving function. # should return near 0 in functional steady state.
+                result  = least_squares(costFun,Xinit, method = 'lm', jac = '3-point',verbose = 0)
+                print result.x
+                #update our guesses with the Delta that we optimisted.
+                updateStoredTransforms(result.x)
+                speechPub.publish('Finished Calibration')
+            #Only 6 degrees of freedom as only the world offset might drift.
+            #else:
+                #print 'using only 6dof'
+                # initial value for solver. 12 values representing the worldTrans, worldRot, markerOffset, markerRot
+                #Xinit = np.array([0,0,0,0,0,0])
 
-            # The main solving function. # should return near 0 in functional steady state.
-            result  = least_squares(costFun,Xinit, method = 'lm', jac = '3-point',verbose = 0)
+                ## The main solving function. # should return near 0 in functional steady state.
+                #result  = least_squares(costFun6,Xinit, method = 'lm', jac = '3-point',verbose = 0)
 
-            #update our guesses with the Delta that we optimisted.
-            updateStoredTransforms(result.x)
-            print('updated')
+                ##update our guesses with the Delta that we optimisted.
+                #updateStoredTransforms6(result.x)
+            #print('updated')
 
             #send transforms for visualisation.
             br.sendTransform(   TR.translation_from_matrix(worldTransform),
@@ -269,6 +408,7 @@ def holoSolve():
 
 if __name__ == '__main__':
     try:
+        print 'starting solver'
         holoSolve()
     except rospy.ROSInterruptException:
         pass
