@@ -4,11 +4,12 @@
 
         <!-- nodes from this package -->
         <node name="holoLink" pkg="hololens_vis" type="holoLink" />
-       <!-- <node name="transformSolver" pkg="hololens_vis" type="optimiseTransforms.py" />-->
+        <node name="image_to_text" pkg="hololens_vis" type="imageToText" />
+        <node name="transformSolver" pkg="hololens_vis" type="optimiseTransforms.py" />
        <!-- <node name="retransmitCenter" pkg="hololens_vis" type="rebroadcastTransforms.py" />-->
-
+<node pkg="tf" type="static_transform_publisher" name="laser" args="0 0 0.227 0 0 0  /wandout /tip  10"/>
         <!--    This is a motion capture node that is specific to my work, though any system transmitting the location of a tag mounted on the hololens should work. -->
-        <node name="motionCapture" pkg="ros_mocha" type="ros_mocha_node" args="10.0.0.148 10.0.0.133"/>
+        <node name="motionCapture" pkg="ros_mocha" type="ros_mocha_node" args="10.0.0.162 10.0.0.133"/>
 
         <!-- rviz for debugging etc -->
         <node name="rviz" pkg="rviz" type="rviz" />

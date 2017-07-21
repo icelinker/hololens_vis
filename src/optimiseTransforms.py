@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 from scipy.optimize import least_squares
 import rospy
+import rospkg
 from std_msgs.msg import String
+from std_msgs.msg import Int32
+from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseArray
 import tf
 import numpy as np
 import math
@@ -27,8 +31,14 @@ roughCalibrate = True
 worldTransform = np.zeros((4,4))
 offsetTransform = np.zeros((4,4))
 
-speechPub = rospy.Publisher('speech', String, queue_size=10)
+askedMarkers = np.zeros( (8,3) )
+measuredMarkers = np.zeros( (8,3) )
 
+speechPub = rospy.Publisher('speech', String, queue_size=10)
+wTPosOut = np.zeros(3)
+wTQuatOut= np.zeros(4)
+
+listener = 0
 # returns a translation and rotation that best aligns constallations A and B
 ######################## This code was shamelessly borrowed from http://nghiaho.com/uploads/code/rigid_transform_3D.py_
 ######################## Credit to Nghia Ho
@@ -184,22 +194,6 @@ def costFun6(x):
     right =  np.matmul(inverseholoTransformList,InvWorldTransformStack)
     difference = np.matmul( left,right)
 
-    ##if the diagonal is close to an Identity then we know that the rotations is good.
-    #myIdentity = np.identity(4)
-    #stackI  = tile(myIdentity,(arrSize,1)).reshape((arrSize,4,4))
-    #justDiagonals =  stackI * difference
-
-    ##extract just the distance cost
-    #difference = np.absolute(difference)
-    #edge = [[0,0,0,1],[0,0,0,1],[0,0,0,1],[0,0,0,0]]
-    #stackE  = tile(edge,(arrSize,1)).reshape((arrSize,4,4))
-    #justEdge = stackE * difference
-
-    ##calculate Costs, will be 0 if everything lines up.
-    #angleCost = 4 - np.sum(justDiagonals, axis=(1,2))
-    #edgeCost = np.sum(justEdge,axis=(1,2))
-
-    #return edgeCost + angleCost
     myIdentity = np.identity(4)
     stackI  = tile(myIdentity,(arrSize,1)).reshape((arrSize,4,4))
     difference = difference - stackI
@@ -264,6 +258,62 @@ def reCalCB(data):
     listFull = False
     speechPub.publish('started Calibration')
 
+def gripCB(data):
+    print 'Grip!'
+    transIn = np.zeros(3)
+    quatIn = np.zeros(4)
+    transIn[0] = data.position.x
+    transIn[1] = -data.position.z
+    transIn[2] = data.position.y
+    quatIn[0] = data.rotation.x
+    quatIn[1] = -data.rotation.z
+    quatIn[2] = data.rotation.y
+    quatIn[3] = -data.rotation.w
+    print TR.euler_from_quaternion(quatIn)
+    print transIn
+    mat = TR.compose_matrix(translate = transIn +trans, angles = anglesWorld);
+    worldTransform = mat
+
+clickNum = 0
+def clickedCB(data):
+    global askedMarkers
+    global listener
+    global worldTransform
+    global measuredMarkers
+    global clickNum
+    print 'clicked'
+    try:
+        (tipTrans,tipRot) = listener.lookupTransform('/mocha_world', '/tip', rospy.Time(0))
+        measuredMarkers[clickNum,:] = tipTrans
+
+        clickNum = clickNum + 1
+        if clickNum == 8:
+            clickNum = 0
+            print 'finished clicking'
+            print 'AskedMarkers:'
+            print askedMarkers
+            print 'measured markers:'
+            print measuredMarkers
+            (worldRotupdate,worldTransUpdate) = rigid_transform_3D(measuredMarkers,askedMarkers)
+            worldRot4 = np.identity(4)
+            for i in range(3):
+                worldRot4[(0,1,2), i] = worldRotupdate[:, i]
+            worldTransformUpdate = TR.compose_matrix(translate=worldTransUpdate ,angles = TR.euler_from_matrix(worldRot4))
+            worldTransformationUpdateInv = TR.inverse_matrix(worldTransformUpdate)
+            worldTransform = np.dot(worldTransformationUpdateInv,worldTransform)
+    except():
+        nothing =0
+
+def poseArrCB(data):
+    global askedMarkers
+    for i in range(8):
+        coord = np.zeros(3)
+        coord[0] = data.poses[i].position.x
+        coord[1] = data.poses[i].position.z
+        coord[2] = data.poses[i].position.y #switched spaces to ros space
+        askedMarkers[i,:] = coord
+
+
 def holoSolve():
 
     global holoTransformList
@@ -281,6 +331,9 @@ def holoSolve():
     global i
     global listFull
     global speechPub
+    global wTQuatOut
+    global wTPosOut
+    global listener
 
     #ros related variables
     rospy.init_node('optimiseHolo', anonymous=True)
@@ -288,6 +341,9 @@ def holoSolve():
     br = tf.TransformBroadcaster()
     rate = rospy.Rate(100)
     rospy.Subscriber("reCalibrate", String, reCalCB)
+    rospy.Subscriber("cameraPosArr", PoseArray, poseArrCB)
+    rospy.Subscriber("grip", Pose, gripCB)
+    rospy.Subscriber("pointClicked", Int32, clickedCB)
     speechPub = rospy.Publisher('speech', String, queue_size=10)
 
 
@@ -297,6 +353,26 @@ def holoSolve():
     listFull = False
     holoSaved = np.zeros((3))
     i = 0;
+    lastUp = 0
+    sinceLast = 0
+
+    #check if we have a saved callibration
+    rospack = rospkg.RosPack()
+    packPath = rospack.get_path('hololens_vis')
+    try:
+        offsetTransform = np.load(packPath + '/calibrate/saved.npy')
+        print 'using saved offsetTransform'
+        wTQuatOut = np.array([0,0,0,1])
+        wTPosOut = np.array([0,0,0])
+        worldTransform = TR.compose_matrix(translate = wTPosOut, angles = TR.euler_from_quaternion(wTQuatOut))
+        preCalibration = False
+        roughCalibrate = False
+        updateOnFirst = True
+    except(IOError):
+        preCalibration = True
+        updateOnFirst = False
+        roughCalibrate = True
+
 
     while not rospy.is_shutdown():
         try:
@@ -306,11 +382,11 @@ def holoSolve():
                 #print 'notCal'
             #get holoLens reported position
             timeMC = listener.getLatestCommonTime('/holoLens', '/holoMC')
-            (holoTrans,holoRot) = listener.lookupTransform('/mocha_world', '/holoLens',timeMC)
+            (holoTrans,holoRot) = listener.lookupTransform('/mocha_world', '/holoLens',timeMC - rospy.Duration.from_sec(0.01))
 
             # only when we are doing the precal and rough cal do we need the transforms to be adequately separated.
-            if buffersFilled <2:
-                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.05:
+            if buffersFilled <1 and preCalibration:
+                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.01:
                     raise NameError('Too close')
             else:
                 if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.01:
@@ -326,14 +402,27 @@ def holoSolve():
             holoTransformList[i,:,:] = TR.compose_matrix(translate=holoTrans ,angles = TR.euler_from_quaternion(holoRot))
             inverseholoTransformList[i,:,:] = TR.inverse_matrix(TR.compose_matrix(translate=holoTrans ,angles = TR.euler_from_quaternion(holoRot)))
             markerTransformList[i,:,:] = TR.compose_matrix(translate=markerTrans ,angles = TR.euler_from_quaternion(markerRot))
+            mostRecentholoInv = inverseholoTransformList[i,:,:]
+            mostRecentMarker = markerTransformList[i,:,:]
 
             #Track where we are in the circular buffers, indicate when the lists are first full.
             i = i +1
+            sinceLast = sinceLast +1
             i = i%targetLength
             if i == 0:
                 listFull = True
                 buffersFilled = buffersFilled + 1
-                print 'listfull'
+                #print 'listfull'
+
+            if updateOnFirst:
+                print 'setting agressivly'
+                worldTransform = np.dot(mostRecentMarker,offsetTransform)
+                worldTransform = np.dot(worldTransform,mostRecentholoInv)
+                wTQuatOut =  TR.quaternion_from_matrix(worldTransform)
+                wTPosOut =TR.translation_from_matrix(worldTransform)
+
+                worldTransform = TR.compose_matrix(translate = wTPosOut, angles = TR.euler_from_quaternion(wTQuatOut))
+                updateOnFirst = False
 
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception, NameError):
@@ -370,19 +459,36 @@ def holoSolve():
                 print result.x
                 #update our guesses with the Delta that we optimisted.
                 updateStoredTransforms(result.x)
+                print 'offsetTransform'
+                print offsetTransform
                 speechPub.publish('Finished Calibration')
+                np.save(packPath + '/calibrate/newest.npy',offsetTransform)
+                wTQuatOut =  TR.quaternion_from_matrix(worldTransform)
+                wTPosOut =TR.translation_from_matrix(worldTransform)
             #Only 6 degrees of freedom as only the world offset might drift.
-            #else:
-                #print 'using only 6dof'
-                # initial value for solver. 12 values representing the worldTrans, worldRot, markerOffset, markerRot
-                #Xinit = np.array([0,0,0,0,0,0])
+            else:
+                # transmit the one shot calculated world transform assuming offset Transform remains correct.
+                if lastUp != i and sinceLast > 1:
+                    sinceLast = 0
+                    lastUp = i
+                    #Xinit = np.array([0,0,0,0,0,0])
 
-                ## The main solving function. # should return near 0 in functional steady state.
-                #result  = least_squares(costFun6,Xinit, method = 'lm', jac = '3-point',verbose = 0)
+                    # The main solving function. # should return near 0 in functional steady state.
+                    #result  = least_squares(costFun6,Xinit, method = 'lm', jac = '3-point',verbose = 0)
+                    #print result.x
+                    #update our guesses with the Delta that we optimisted.
+                    #updateStoredTransforms6(result.x)
+                    worldTransform = np.dot(mostRecentMarker,offsetTransform)
+                    worldTransform = np.dot(worldTransform,mostRecentholoInv)
+                     ##make an IIR filter for the transform.
+                    wTQuatIn = TR.quaternion_from_matrix(worldTransform)
+                    wTQuatOut = TR.quaternion_slerp(wTQuatOut,wTQuatIn,0.01)
+                    wTPosIn = TR.translation_from_matrix(worldTransform)
+                    wTPosOut = 0.99*wTPosOut + 0.01* wTPosIn
 
-                ##update our guesses with the Delta that we optimisted.
-                #updateStoredTransforms6(result.x)
-            #print('updated')
+                    #wTQuatOut = wTQuatOut / LA.norm(wTQuatOut)
+                    worldTransform = TR.compose_matrix(translate = wTPosOut, angles = TR.euler_from_quaternion(wTQuatOut))
+
 
             #send transforms for visualisation.
             br.sendTransform(   TR.translation_from_matrix(worldTransform),

@@ -10,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   tf
+  image_transport
+  cv_bridge
 )
 
 set(CMAKE_CXX_FLAGS  "-W -Wall -std=c++11")
@@ -134,6 +136,7 @@ include_directories(
 ## Declare a C++ executable
 # add_executable(hololens_vis_node src/hololens_vis_node.cpp)
 add_executable(holoLink src/hololink.cpp)
+add_executable(imageToString src/imageToString.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(hololens_vis_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -142,7 +145,9 @@ add_executable(holoLink src/hololink.cpp)
 target_link_libraries(holoLink
 ${catkin_LIBRARIES}
 )
-
+target_link_libraries(imageToString
+    ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############
