@@ -31,6 +31,13 @@ int main(int argc, char** argv){
     ros::init(argc, argv, "holoLink");
 
     ros::NodeHandle node;
+
+    if(argc != 2){
+        std::cout << "the arguments should be wheelchair tf"<< std::endl;
+        return -1;
+    }
+    std::string WheelTFName = argv[1];
+
     br = new tf::TransformBroadcaster();
     ros::Subscriber poseSub = node.subscribe("/holoPose",1,&poseCB);
     ros::Subscriber nextSub = node.subscribe("/holoNext",1,&nextCB);
@@ -58,7 +65,7 @@ int main(int argc, char** argv){
 
         try {
             tf::StampedTransform wheelChairTransform;
-            listener.lookupTransform("/world", "turtle1", ros::Time(0), wheelChairTransform);
+            listener.lookupTransform("/world", WheelTFName, ros::Time(0), wheelChairTransform);
             publishPose(wheelChairPub, wheelChairTransform);
         } catch (tf::TransformException ex) {
 

@@ -4,10 +4,13 @@
         <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 
         <!-- nodes from this package -->
-        <node name="holoLink" pkg="hololens_vis" type="holoLink" />
+        <!-- the following node is the primary node for comms to HL, args are: Name of TF for wheelchair-->
+        <node name="holoLink" pkg="hololens_vis" type="holoLink" args="/turtle1" />
+        <!-- the following nodes pipe the images over a text topic, args are: image to read from, topic to publish to.-->
         <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/collisionVis /collisionVisText"/>
-        <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
         <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
+        <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
+
 
         <!-- nodes to help debugging (sans wheelchair), publish a float to errorMetric for blood splatter-->
         <node name="spoofImColl" pkg="hololens_vis" type="spoofImages" args="/collisionVis floor.png" />
