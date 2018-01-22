@@ -1,0 +1,20 @@
+<launch>
+
+        <!-- requires the rosbridge package -->
+        <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+
+        <!-- nodes from this package -->
+        <node name="holoLink" pkg="hololens_vis" type="holoLink" />
+        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/collisionVis /collisionVisText"/>
+        <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
+        <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
+
+        <!-- nodes to help debugging (sans wheelchair), publish a float to errorMetric for blood splatter-->
+        <node name="spoofImColl" pkg="hololens_vis" type="spoofImages" args="/collisionVis floor.png" />
+        <node name="spoofImJoy" pkg="hololens_vis" type="spoofImages" args="/joystickVis arrows.png"/>
+        <node name="spoofTF" pkg="hololens_vis" type="spoofTF" args="turtle1"/>
+        <node name="turtles" pkg="turtlesim" type="turtlesim_node" />
+        <node name="turtleController" pkg="turtlesim" type="turtle_teleop_key"/>
+
+
+</launch>

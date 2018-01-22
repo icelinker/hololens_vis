@@ -47,14 +47,16 @@ int main(int argc, char** argv){
     tf::TransformListener listener;
     ros::Rate rate(30);
 
-    std::string path = ros::package::getPath("hololens_vis"); // this line finds where this package is on your computer without using /philip etc
-    std::stringstream ssPath;
-    ssPath << path << "/data/test.txt";
+//    std::string path = ros::package::getPath("hololens_vis"); // this line finds where this package is on your computer without using /philip etc
+//    std::stringstream ssPath;
+//    ssPath << path << "/data/test.txt";
 
-    std::ofstream myfile;
-    myfile.open (ssPath.str());
-    myfile<< "error, angleErr" <<std::endl;
+//    std::ofstream myfile;
+//    myfile.open (ssPath.str());
+//    myfile<< "error, angleErr" <<std::endl;
     while(ros::ok()){
+
+        // pick up wheelchair transform and publish it as a pose
 
         try {
             tf::StampedTransform wheelChairTransform;
@@ -63,17 +65,10 @@ int main(int argc, char** argv){
         } catch (tf::TransformException ex) {
 
         }
-        try{
-            tf::StampedTransform holoWorldTransform;
-            listener.lookupTransform("/hlInMC", "/mocha_world",ros::Time(0), holoWorldTransform);
-            publishPose(holoWorldPub,holoWorldTransform);
-        }
-        catch (tf::TransformException ex){
 
-        }
         try{
             tf::StampedTransform NozzleTransform;
-            listener.lookupTransform("/mocha_world", "/nozzle",ros::Time(0), NozzleTransform);
+            listener.lookupTransform("/holoWorld", "/nozzle",ros::Time(0), NozzleTransform);
             //tf::Quaternion q(NozzleTransform.getRotation().getX(), NozzleTransform.getRotation().getZ(), NozzleTransform.getRotation().getY(), 1.0 * NozzleTransform.getRotation().getW());
 //            NozzleTransform.setRotation(q);
             publishPose2(nozzlePub,NozzleTransform);
@@ -83,7 +78,7 @@ int main(int argc, char** argv){
         }
         try{
             tf::StampedTransform manTransform;
-            listener.lookupTransform("/mocha_world", "/man",ros::Time(0), manTransform);
+            listener.lookupTransform("/holoWorld", "/man",ros::Time(0), manTransform);
             publishPose(manPub,manTransform);
         }
         catch (tf::TransformException ex){
@@ -93,14 +88,14 @@ int main(int argc, char** argv){
             if(shouldNext){
                 shouldNext = false;
                 static tf::StampedTransform wandTransform, wandTransformFound;
-                listener.lookupTransform("/mocha_world", "/wandout",ros::Time(0), wandTransformFound);
+                listener.lookupTransform("/holoWorld", "/wandout",ros::Time(0), wandTransformFound);
                 float posErr =  wandTransformFound.getOrigin().distance( wandTransform.getOrigin());
                 float angErr = wandTransformFound.getRotation().angle(wandTransform.getRotation());
                 std_msgs::Float32MultiArray arrayMsg;
                 arrayMsg.data.push_back(posErr);
                 arrayMsg.data.push_back(angErr);
                 accuracyPub.publish(arrayMsg);
-                myfile  <<posErr << "," << angErr << std::endl;
+                //myfile  <<posErr << "," << angErr << std::endl;
                 float x = -tableW + 2*tableW*rand()/RAND_MAX;
                 float z = -tableL + 2*tableL* rand()/RAND_MAX;
                 float angle = 3.14*2* rand()/RAND_MAX;
@@ -112,6 +107,7 @@ int main(int argc, char** argv){
         catch (tf::TransformException ex){
 
         }
+
         tf::StampedTransform origin;
         origin.setOrigin(tf::Vector3(0,0,0));
         origin.setRotation(tf::Quaternion(0,0,0,1));
@@ -152,7 +148,7 @@ void publishPoseArray(ros::Publisher pub){
         aPose.position.z = cameraPos[i].z();
         arr.poses.push_back(aPose);
     }
-    arr.header.frame_id = "/mocha_world";
+    arr.header.frame_id = "/holoWorld";
     arr.header.stamp = ros::Time::now();
     pub.publish(arr);
 }
@@ -207,6 +203,6 @@ void poseCB(const geometry_msgs::PoseStampedConstPtr &msg){
 
 
     transform.child_frame_id_ = "holoLens";
-    transform.frame_id_ = "mocha_world";
+    transform.frame_id_ = "holoWorld";
     br->sendTransform(transform);
 }

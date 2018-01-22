@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   image_transport
   cv_bridge
+  roslib
 )
 
 set(CMAKE_CXX_FLAGS  "-W -Wall -std=c++11")
@@ -137,16 +138,76 @@ include_directories(
 # add_executable(hololens_vis_node src/hololens_vis_node.cpp)
 add_executable(holoLink src/hololink.cpp)
 add_executable(imageToString src/imageToString.cpp)
+add_executable(stringToImage src/stringToImage.cpp)
+add_executable(timeSync src/timesync.cpp)
+add_executable(exp_control src/exp_control.cpp)
+add_executable(inv_trans src/inv_trans.cpp)
+add_executable(holoLinkLight src/holoLinkLight.cpp)
+add_executable(calibrateMarkersCam src/calibrateMarkersCam.cpp)
+add_executable(calibrateCamInGun src/calibrateCamInGun.cpp)
+add_executable(nozzleFilter src/nozzleFilter.cpp)
+add_executable(markerPose src/markerPose.cpp)
+add_executable(markerAgr src/markerAgr.cpp)
+add_executable(findpath src/findpath.cpp src/stlastar.h src/fsa.h)
+add_executable(spoofTF src/spoofTF.cpp)
+add_executable(spoofImages src/spoofImages.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(hololens_vis_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(holoLinkLight
+${catkin_LIBRARIES}
+)
 target_link_libraries(holoLink
 ${catkin_LIBRARIES}
 )
 target_link_libraries(imageToString
     ${catkin_LIBRARIES}
+)
+target_link_libraries(stringToImage
+    ${catkin_LIBRARIES}
+)
+target_link_libraries(timeSync
+    ${catkin_LIBRARIES}
+)
+target_link_libraries(exp_control
+   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(inv_trans
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(calibrateMarkersCam
+   ${catkin_LIBRARIES}
+)
+
+
+target_link_libraries(calibrateCamInGun
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(nozzleFilter
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(markerPose
+  ${catkin_LIBRARIES}
+  ${aruco_LIBS}
+   ${OpenCV_LIBS}
+)
+target_link_libraries(markerAgr
+  ${catkin_LIBRARIES}
+  ${aruco_LIBS}
+   ${OpenCV_LIBS}
+)
+target_link_libraries(findpath
+	${catkin_LIBRARIES}
+)
+target_link_libraries(spoofTF
+        ${catkin_LIBRARIES}
+)
+target_link_libraries(spoofImages
+        ${catkin_LIBRARIES}
 )
 #############
 ## Install ##

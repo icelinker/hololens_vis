@@ -12,7 +12,7 @@ import math
 from numpy import linalg as LA
 from numpy import *
 from tf import transformations as TR
-targetLength =200
+targetLength =1000
 
 buffersFilled = 0
 preCalibration = True
@@ -382,14 +382,14 @@ def holoSolve():
                 #print 'notCal'
             #get holoLens reported position
             timeMC = listener.getLatestCommonTime('/holoLens', '/holoMC')
-            (holoTrans,holoRot) = listener.lookupTransform('/mocha_world', '/holoLens',timeMC - rospy.Duration.from_sec(0.01))
+            (holoTrans,holoRot) = listener.lookupTransform('/mocha_world', '/holoLens',timeMC)
 
             # only when we are doing the precal and rough cal do we need the transforms to be adequately separated.
             if buffersFilled <1 and preCalibration:
-                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.01:
+                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.005:
                     raise NameError('Too close')
             else:
-                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.01:
+                if LA.norm(np.asarray(holoSaved)-np.asarray(holoTrans)) < 0.005:
                     raise NameError('Too close')
             holoSaved = holoTrans
 
@@ -485,6 +485,8 @@ def holoSolve():
                     wTQuatOut = TR.quaternion_slerp(wTQuatOut,wTQuatIn,0.01)
                     wTPosIn = TR.translation_from_matrix(worldTransform)
                     wTPosOut = 0.99*wTPosOut + 0.01* wTPosIn
+                    #wTQuatOut = wTQuatIn;
+                    #wtPosOut = wTPosOut;
 
                     #wTQuatOut = wTQuatOut / LA.norm(wTQuatOut)
                     worldTransform = TR.compose_matrix(translate = wTPosOut, angles = TR.euler_from_quaternion(wTQuatOut))
@@ -493,7 +495,7 @@ def holoSolve():
             #send transforms for visualisation.
             br.sendTransform(   TR.translation_from_matrix(worldTransform),
                                 TR.quaternion_from_matrix(worldTransform),
-                                rospy.Time.now(),
+                                timeMC,
                                 'hlInMC',
                                 'mocha_world')
             br.sendTransform(   TR.translation_from_matrix(offsetTransform),
@@ -504,7 +506,7 @@ def holoSolve():
             br.sendTransform(   holoTrans,
                                 holoRot,
                                 #TR.quaternion_inverse(holoRot2),
-                                rospy.Time.now(),
+                                timeMC,
                                 'OCholo',
                                 'hlInMC')
         try:

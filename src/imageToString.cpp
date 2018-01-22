@@ -28,7 +28,7 @@ ros::Publisher turnPub;
 
 ros::Publisher imTextPub;
 std::stringstream ssPath;
-bool highQual =1;
+bool highQual =0;
 int sentNum = 0;
 int main(int argc, char** argv){
 
@@ -41,35 +41,41 @@ int main(int argc, char** argv){
     //make strings containing the paths to the test images.
     std::string path = ros::package::getPath("hololens_vis"); // this line finds where this package is on your computer without using /philip etc
     
-    ssPath << path << "/src/Image3.png";      //here we just add the ending of the path.
+//    ssPath << path << "/src/Image3.png";      //here we just add the ending of the path.
 
 
-    //do a check to make sure that ros found the folder on the computer.
-    if(path.empty()){
-        std::cout << "I do not know where imageTutorial is..." << std::endl;
+//    //do a check to make sure that ros found the folder on the computer.
+//    if(path.empty()){
+//        std::cout << "I do not know where imageTutorial is..." << std::endl;
+//        return -1;
+//    }
+
+    // parse arguments
+    if(argc != 3){
+        std::cout << "there should be 2 args, the image topic and the output text topic" << std::endl;
         return -1;
     }
-
-
-
+    std::cout << "image topic is " << argv[1] << "    text topic is " << argv[2] << std::endl;
+    std::string imageTopicName = argv[1];
+    std::string textTopicName = argv[2];
 
 
     //set up ros objects
     ros::NodeHandle node;
     image_transport::ImageTransport it_(node);
-    turnPub = node.advertise<std_msgs::Float32>("/turn",1);
+
 
     //Subscribe to the thermal image topic.
-    image_transport::Subscriber imSub = it_.subscribe("/texIm",1, imageCallback);
-    imTextPub = node.advertise<std_msgs::String>("/imText",1);
+    image_transport::Subscriber imSub = it_.subscribe(imageTopicName,1, imageCallback);
+    imTextPub = node.advertise<std_msgs::String>(textTopicName,1);
 
     ros::Subscriber qual = node.subscribe("/qual",1,qualCB);
 
     cv::Mat testIm = cv::imread(ssPath.str());
-    ros::Rate rate(30);
+    ros::Rate rate(15);
     while(ros::ok()){
         ros::spinOnce();
-        sendStrIm(testIm);
+        //sendStrIm(testIm);
         rate.sleep();
     }
 
@@ -99,6 +105,7 @@ void sendStrIm( cv::Mat image){
     std::vector<unsigned char> buf;
     std::vector<int> params;
     std::string codedStr;
+    if(image.rows > 0){
     if(highQual && sentNum < 2){
         sentNum ++ ;
         //cv::resize(image, image, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
@@ -110,12 +117,13 @@ void sendStrIm( cv::Mat image){
         imTextPub.publish(msg);
     }
     if(!highQual){
-        cv::resize(image, image, cv::Size(), 0.125, 0.125, cv::INTER_AREA);
-        cv::imencode(".jpg",image,buf,params);
+       //cv::resize(image, image, cv::Size(), 0.125, 0.125, cv::INTER_AREA);
+        cv::imencode(".png",image,buf,params);
         codedStr = base64_encode(&buf[0], buf.size());
         std_msgs::String msg;
         msg.data = codedStr;
         imTextPub.publish(msg);
+    }
     }
 
 }

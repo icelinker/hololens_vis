@@ -1,0 +1,14 @@
+<launch>
+
+        <!-- requires the rosbridge package -->
+        <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+
+        <!-- nodes from this package -->
+        <node name="holoLink" pkg="hololens_vis" type="holoLink" />
+        <node name="image_to_text" pkg="hololens_vis" type="imageToString" args="/solvedMap /solvedMapText"/>
+        <node name="text_to_image" pkg="hololens_vis" type="stringToImage"/>
+        <node name="pathfinder" pkg="hololens_vis" type="findpath" />
+        <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
+
+
+</launch>
