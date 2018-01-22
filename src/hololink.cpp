@@ -65,7 +65,7 @@ int main(int argc, char** argv){
 
         try {
             tf::StampedTransform wheelChairTransform;
-            listener.lookupTransform("/world", WheelTFName, ros::Time(0), wheelChairTransform);
+            listener.lookupTransform("/map", WheelTFName, ros::Time(0), wheelChairTransform);
             publishPose(wheelChairPub, wheelChairTransform);
         } catch (tf::TransformException ex) {
 

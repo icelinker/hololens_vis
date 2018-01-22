@@ -5,9 +5,9 @@
 
         <!-- nodes from this package -->
         <!-- the following node is the primary node for comms to HL, args are: Name of TF for wheelchair-->
-        <node name="holoLink" pkg="hololens_vis" type="holoLink" args="/turtle1" />
+        <node name="holoLink" pkg="hololens_vis" type="holoLink" args="/base_link" />
         <!-- the following nodes pipe the images over a text topic, args are: image to read from, topic to publish to.-->
-        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/collisionVis /collisionVisText"/>
+        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/formatted_grid /collisionVisText"/>
         <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
         <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
 
