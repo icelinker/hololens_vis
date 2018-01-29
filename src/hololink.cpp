@@ -22,6 +22,7 @@ void publishSpeech(ros::Publisher pub,std::string text);
 void publishPoseArray(ros::Publisher pub);
 void holoPingOut(ros::Publisher pub);
 void holoPingRespCB(const std_msgs::TimeConstPtr &msg);
+void poseOBJ1CB(const geometry_msgs::PoseStampedConstPtr &msg);
 
 float tableH = 0.587;
 float tableW = 0.43/2;
@@ -32,15 +33,17 @@ int main(int argc, char** argv){
 
     ros::NodeHandle node;
 
-    if(argc != 2){
-        std::cout << "the arguments should be wheelchair tf"<< std::endl;
+    if(argc != 3){
+        std::cout << "the arguments should be wheelchair tf, then world frame"<< std::endl;
         return -1;
     }
     std::string WheelTFName = argv[1];
+    std::string worldFrame = argv[2];
 
     br = new tf::TransformBroadcaster();
     ros::Subscriber poseSub = node.subscribe("/holoPose",1,&poseCB);
     ros::Subscriber nextSub = node.subscribe("/holoNext",1,&nextCB);
+    ros::Subscriber obs1sub = node.subscribe("/obs1",1,&poseOBJ1CB);
     ros::Publisher  holoWorldPub = node.advertise<geometry_msgs::Pose>("/holoWorld",1);
     ros::Publisher  manPub = node.advertise<geometry_msgs::Pose>("/manPose",1);
     ros::Publisher  nozzlePub = node.advertise<geometry_msgs::Pose>("/nozzlePose",1);
@@ -65,7 +68,7 @@ int main(int argc, char** argv){
 
         try {
             tf::StampedTransform wheelChairTransform;
-            listener.lookupTransform("/world", WheelTFName, ros::Time(0), wheelChairTransform);
+            listener.lookupTransform(worldFrame, WheelTFName, ros::Time(0), wheelChairTransform);
             publishPose(wheelChairPub, wheelChairTransform);
         } catch (tf::TransformException ex) {
 
@@ -215,5 +218,28 @@ void poseCB(const geometry_msgs::PoseStampedConstPtr &msg){
 
     transform.child_frame_id_ = "holoLens";
     transform.frame_id_ = "mocha_world";
+    br->sendTransform(transform);
+}
+
+void poseOBJ1CB(const geometry_msgs::PoseStampedConstPtr &msg){
+    tf::StampedTransform transform;
+    tf::Quaternion rotation;
+    tf::Point location;
+    rotation.setX(msg->pose.orientation.x);
+    rotation.setY(msg->pose.orientation.z);
+    rotation.setZ(msg->pose.orientation.y);
+    rotation.setW(msg->pose.orientation.w);
+    rotation = rotation.inverse();
+    location.setX(msg->pose.position.x);
+    location.setY(msg->pose.position.z);
+    location.setZ(msg->pose.position.y);
+
+    transform.setOrigin(location);
+    transform.setRotation(rotation);
+    transform.stamp_ = msg->header.stamp;
+
+
+    transform.child_frame_id_ = "obj1";
+    transform.frame_id_ = "move_base";
     br->sendTransform(transform);
 }
