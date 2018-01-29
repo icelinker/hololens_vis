@@ -5,19 +5,22 @@
 
         <!-- nodes from this package -->
         <!-- the following node is the primary node for comms to HL, args are: Name of TF for wheelchair-->
-        <node name="holoLink" pkg="hololens_vis" type="holoLink" args="/turtle1 /world" />
+
+       <!-- <node name="holoLink" pkg="hololens_vis" type="holoLink" args="/turtle1 /world" />-->
+
+        <node name="holoLink" pkg="hololens_vis" type="holoLink" args="base_link" />
+
         <!-- the following nodes pipe the images over a text topic, args are: image to read from, topic to publish to.-->
-        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/collisionVis /collisionVisText"/>
+        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/formatted_grid/image /collisionVisText"/>
         <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
         <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
 
 
         <!-- nodes to help debugging (sans wheelchair), publish a float to errorMetric for blood splatter-->
-        <node name="spoofImColl" pkg="hololens_vis" type="spoofImages" args="/collisionVis floor.png" />
+        <!--node name="spoofImColl" pkg="hololens_vis" type="spoofImages" args="/collisionVis floor.png" />
         <node name="spoofImJoy" pkg="hololens_vis" type="spoofImages" args="/joystickVis arrows.png"/>
         <node name="spoofTF" pkg="hololens_vis" type="spoofTF" args="turtle1"/>
         <node name="turtles" pkg="turtlesim" type="turtlesim_node" />
-        <node name="turtleController" pkg="turtlesim" type="turtle_teleop_key"/>
-
+        <node name="turtleController" pkg="turtlesim" type="turtle_teleop_key"/-->
 
 </launch>

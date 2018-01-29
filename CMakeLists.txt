@@ -19,7 +19,8 @@ set(CMAKE_CXX_FLAGS  "-W -Wall -std=c++11")
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -167,12 +168,14 @@ target_link_libraries(imageToString
 )
 target_link_libraries(stringToImage
     ${catkin_LIBRARIES}
+    ${OpenCV_LIBS}
 )
 target_link_libraries(timeSync
     ${catkin_LIBRARIES}
 )
 target_link_libraries(exp_control
    ${catkin_LIBRARIES}
+   ${OpenCV_LIBS}
 )
 
 target_link_libraries(inv_trans
@@ -202,6 +205,7 @@ target_link_libraries(markerAgr
 )
 target_link_libraries(findpath
 	${catkin_LIBRARIES}
+	${OpenCV_LIBS}
 )
 target_link_libraries(spoofTF
         ${catkin_LIBRARIES}
