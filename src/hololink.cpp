@@ -128,7 +128,7 @@ int main(int argc, char** argv){
         origin.setOrigin(tf::Vector3(0,0,0));
         origin.setRotation(tf::Quaternion(0,0,0,1));
         publishPose(originPub,origin);
-        publishPoseArray(cameraPub);
+        //publishPoseArray(cameraPub);
         rate.sleep();
         ros::spinOnce();
     }

@@ -72,7 +72,7 @@ int main(int argc, char** argv){
     ros::Subscriber qual = node.subscribe("/qual",1,qualCB);
 
     cv::Mat testIm = cv::imread(ssPath.str());
-    ros::Rate rate(15);
+    ros::Rate rate(5);
     while(ros::ok()){
         ros::spinOnce();
         //sendStrIm(testIm);
@@ -103,7 +103,9 @@ void qualCB(const std_msgs::StringConstPtr& msg){
 
 void sendStrIm( cv::Mat image){
     std::vector<unsigned char> buf;
-    std::vector<int> params;
+    std::vector<int> params(2);
+    params[0] = CV_IMWRITE_PNG_COMPRESSION;
+    params[1] = 9;
     std::string codedStr;
     if(image.rows > 0){
     if(highQual && sentNum < 2){
