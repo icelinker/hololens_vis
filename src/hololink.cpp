@@ -45,6 +45,7 @@ int main(int argc, char** argv){
     ros::Subscriber nextSub = node.subscribe("/holoNext",1,&nextCB);
     ros::Subscriber obs1sub = node.subscribe("/obs1",1,&poseOBJ1CB);
     ros::Publisher  holoWorldPub = node.advertise<geometry_msgs::Pose>("/holoWorld",1);
+    ros::Publisher  holoRosOffsetPub = node.advertise<geometry_msgs::Pose>("/holoRosOffset",1);
     ros::Publisher  manPub = node.advertise<geometry_msgs::Pose>("/manPose",1);
     ros::Publisher  nozzlePub = node.advertise<geometry_msgs::Pose>("/nozzlePose",1);
     ros::Publisher  wandPub = node.advertise<geometry_msgs::Pose>("/wandPose",1);
@@ -79,6 +80,14 @@ int main(int argc, char** argv){
             tf::StampedTransform holoWorldTransform;
             listener.lookupTransform("/hlInMC", "/mocha_world",ros::Time(0), holoWorldTransform);
             publishPose(holoWorldPub,holoWorldTransform);
+        }
+        catch (tf::TransformException ex){
+
+        }
+        try{
+            tf::StampedTransform holoWorldTransform;
+            listener.lookupTransform("/holoWorld", "/rosWorld",ros::Time(0), holoWorldTransform);
+            publishPose(holoRosOffsetPub,holoWorldTransform);
         }
         catch (tf::TransformException ex){
 
