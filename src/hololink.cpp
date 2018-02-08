@@ -86,7 +86,7 @@ int main(int argc, char** argv){
         }
         try{
             tf::StampedTransform holoWorldTransform;
-            listener.lookupTransform("/holoWorld", "/rosWorld",ros::Time(0), holoWorldTransform);
+            listener.lookupTransform("/rosWorld", "/holoWorld",ros::Time(0), holoWorldTransform);
             publishPose(holoRosOffsetPub,holoWorldTransform);
         }
         catch (tf::TransformException ex){
