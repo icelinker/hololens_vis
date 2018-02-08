@@ -101,16 +101,16 @@ void ROSTriangleCB(hololens_experiment::CommonPointsConstPtr msg){
 int main(int argc, char **argv) {
     /// end of calibrated values.
     ros::init(argc, argv, "triangle transform node");
-    if (argc < 3) {
+    /*if (argc < 3) {
       std::cout << "Usage: Ros triangle topic , hololens triangel topic"
                 << std::endl;
       return -1;
-    }
+    }*/
 
     ros::NodeHandle node;
 
     ros::Subscriber hololensTriangleSub = node.subscribe("/hololens/commonPoints",1,&hololensTriangleCB);
-    ros::Subscriber ROSTriangleSub = node.subscribe("/hololens_experiment/commonPoints",1,&ROSTriangleCB);
+    ros::Subscriber ROSTriangleSub = node.subscribe("/hololens_experiment/common_points",1,&ROSTriangleCB);
     hololensTriangleTime = ros::Time::now();
     tf::TransformBroadcaster br;
 
