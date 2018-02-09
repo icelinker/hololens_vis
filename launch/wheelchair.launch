@@ -10,16 +10,11 @@
         <node name="holoLink" pkg="hololens_vis" type="holoLink" args="base_link map" />
 
         <!-- the following nodes pipe the images over a text topic, args are: image to read from, topic to publish to.-->
-        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/formatted_grid/image /collisionVisText"/>
+        <node name="image_to_text_coll" pkg="hololens_vis" type="imageToString" args="/formatted_grid/debug_image /collisionVisText"/>
         <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
         <node name="image_to_text_mirror" pkg="hololens_vis" type="imageToString" args="/rear_camera/image_raw /mirrorText"/>
         <node name="triangle_aligner" pkg="hololens_vis" type="pointWorldAlignment"/>
         <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
-        <node  pkg="uvc_camera" type="uvc_camera_node" name="uvc_camera" output="screen">
-         <param name="width" type="int" value="320" />
-        <param name="device" type="string" value="/dev/video1"/>    
-	<param name="height" type="int" value="240" />
-        </node>
 
 
         <!-- nodes to help debugging (sans wheelchair), publish a float to errorMetric for blood splatter-->
