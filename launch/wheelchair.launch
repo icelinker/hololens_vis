@@ -1,5 +1,12 @@
 <launch>
 
+
+<!--============================================================================
+    ALTERNATIVE COMPUTER FOR OFFLOAD
+=============================================================================-->
+    <machine name="offload" address="10.0.0.135" env-loader="~/workspace/catkin_ws/devel/env.sh" default="true" />
+
+
         <!-- requires the rosbridge package -->
         <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 
@@ -14,11 +21,11 @@
         <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
         <node name="image_to_text_mirror" pkg="hololens_vis" type="imageToString" args="/rear_camera/image_raw /mirrorText"/>
         <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
-        <node  pkg="uvc_camera" type="uvc_camera_node" name="uvc_camera" output="screen">
+        <!--node  pkg="uvc_camera" type="uvc_camera_node" name="uvc_camera" output="screen">
          <param name="width" type="int" value="320" />
         <param name="device" type="string" value="/dev/video1"/>    
 	<param name="height" type="int" value="240" />
-        </node>
+        </node>-->
 
 
         <!-- nodes to help debugging (sans wheelchair), publish a float to errorMetric for blood splatter-->
