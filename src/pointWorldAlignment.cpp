@@ -120,6 +120,7 @@ int main(int argc, char **argv) {
     ros::Subscriber ROSTriangleSub = node.subscribe("/hololens_experiment/common_points",1,&ROSTriangleCB);
     hololensTriangleTime = ros::Time::now();
     tf::TransformBroadcaster br;
+    ros::Rate rate(1);
     while (ros::ok()) {
         if(hololensTriangleTime == ROSTriangleTime){
             std::vector<std::pair<cv::Mat, cv::Mat>> listOfPairs;
@@ -149,6 +150,7 @@ int main(int argc, char **argv) {
             br.sendTransform(
                 tf::StampedTransform(trans, ROSTriangleTime, "holoWorld", "rosWorld"));
         }
+        rate.sleep();
     ros::spinOnce();
     }
     }
