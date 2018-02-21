@@ -32,6 +32,7 @@ int main(int argc, char** argv){
     ros::Subscriber holoPingSub = node.subscribe("/holoPing",1,&holoPingRespCB);
     lastPingTime = ros::Time::now();
     ros::Duration timeSinceLastPing;
+    ros::Rate rate(20);
     while(ros::ok()){
         ros::Duration timeSinceLastPing = ros::Time::now() - lastPingTime;
         if(timeSinceLastPing >ros::Duration(0.1)){
@@ -41,6 +42,7 @@ int main(int argc, char** argv){
             }
         }
         ros::spinOnce();
+        rate.sleep();
     }
 
 }
