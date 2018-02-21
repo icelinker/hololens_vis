@@ -30,6 +30,7 @@ ros::Publisher imTextPub;
 std::stringstream ssPath;
 bool highQual =0;
 int sentNum = 0;
+ros::Time lastPub;
 int main(int argc, char** argv){
 
 
@@ -73,6 +74,7 @@ int main(int argc, char** argv){
 
     cv::Mat testIm = cv::imread(ssPath.str());
     ros::Rate rate(5);
+    lastPub = ros::Time::now();
     while(ros::ok()){
         ros::spinOnce();
         //sendStrIm(testIm);
@@ -85,8 +87,12 @@ int main(int argc, char** argv){
 void imageCallback(const sensor_msgs::ImageConstPtr& msg){
 
     //get the image from the message
-    cv::Mat image =  cv_bridge::toCvShare(msg, "bgr8")->image;
-    sendStrIm(image);
+    ros::Duration sinceLast = ros::Time::now() - lastPub;
+    if(sinceLast.toSec()> 0.2){
+        lastPub = ros::Time::now();
+        cv::Mat image =  cv_bridge::toCvShare(msg, "bgr8")->image;
+        sendStrIm(image);
+    }
 
 }
 
