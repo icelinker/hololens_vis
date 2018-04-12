@@ -10,15 +10,16 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <hololens_experiment/CommonPoints.h>
+#include <hololens_experiment/eightPoints.h>
 float findTransform(std::vector<std::pair<cv::Mat, cv::Mat>> CP, cv::Mat &R,
                     cv::Mat &t) {
   cv::Mat ac = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
   cv::Mat bc = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
-  int samples = CP.size();
+  int samples =3;//CP.size();
   for (int i = 0; i < samples; i++) {
     ac += CP.at(i).first;
-    // std::cout << "first" << i << " " << CP.at(i).first << std::endl;
-    // std::cout << "second" << i << " " << CP.at(i).second << std::endl;
+     std::cout << "first" << i << " " << CP.at(i).first << std::endl;
+     std::cout << "second" << i << " " << CP.at(i).second << std::endl;
     bc += CP.at(i).second;
   }
   ac /= samples;
@@ -37,9 +38,19 @@ float findTransform(std::vector<std::pair<cv::Mat, cv::Mat>> CP, cv::Mat &R,
   cv::transpose(svd.vt, v);
   cv::Mat ut;
   cv::transpose(svd.u, ut);
+  do{
   R = v * ut;
   // std::cout << cv::determinant(v)<< std::endl;
   t = -R * ac + bc;
+
+  if(cv::determinant(R) < 0){
+      v.at<float>(0,2) = -v.at<float>(0,2);
+      v.at<float>(1,2) = -v.at<float>(1,2);
+      v.at<float>(2,2) = -v.at<float>(2,2);
+  }
+  }
+  while(cv::determinant(R) < 0);
+
   float val = 0;
   for (int i = 0; i < samples; i++) {
     cv::Mat thePoint = (R * CP.at(i).first) + t;
@@ -56,7 +67,8 @@ float findTransform(std::vector<std::pair<cv::Mat, cv::Mat>> CP, cv::Mat &R,
 //cv::Mat ac = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
 std::vector<cv::Mat> hololensVector;
 ros::Time hololensTriangleTime;
-void hololensTriangleCB(hololens_experiment::CommonPointsConstPtr msg){
+std::vector<float> holoDebug,rosDebug;
+void hololensTriangleCB(hololens_experiment::eightPointsConstPtr msg){
     hololensVector.clear();
     hololensTriangleTime = msg->stamp;
     cv::Mat pointMat1 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
@@ -76,10 +88,44 @@ void hololensTriangleCB(hololens_experiment::CommonPointsConstPtr msg){
     pointMat3.at<float>(1) = msg->p3.z;
     pointMat3.at<float>(2) = msg->p3.y;
     hololensVector.push_back(pointMat3);
+
+    cv::Mat pointMat4 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat4.at<float>(0) = msg->p4.x;
+    pointMat4.at<float>(1) = msg->p4.z;
+    pointMat4.at<float>(2) = msg->p4.y;
+    hololensVector.push_back(pointMat4);
+
+    cv::Mat pointMat5 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat5.at<float>(0) = msg->p5.x;
+    pointMat5.at<float>(1) = msg->p5.z;
+    pointMat5.at<float>(2) = msg->p5.y;
+    hololensVector.push_back(pointMat5);
+
+    cv::Mat pointMat6 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat6.at<float>(0) = msg->p6.x;
+    pointMat6.at<float>(1) = msg->p6.z;
+    pointMat6.at<float>(2) = msg->p6.y;
+    hololensVector.push_back(pointMat6);
+
+    cv::Mat pointMat7 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat7.at<float>(0) = msg->p7.x;
+    pointMat7.at<float>(1) = msg->p7.z;
+    pointMat7.at<float>(2) = msg->p7.y;
+    hololensVector.push_back(pointMat7);
+
+    cv::Mat pointMat8 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat8.at<float>(0) = msg->p8.x;
+    pointMat8.at<float>(1) = msg->p8.z;
+    pointMat8.at<float>(2) = msg->p8.y;
+    hololensVector.push_back(pointMat8);
+
+
+
+
 }
 std::vector<cv::Mat> ROSVector;
 ros::Time ROSTriangleTime;
-void ROSTriangleCB(hololens_experiment::CommonPointsConstPtr msg){
+void ROSTriangleCB(hololens_experiment::eightPointsConstPtr msg){
     ROSVector.clear();
     ROSTriangleTime = msg->stamp;
 
@@ -100,6 +146,37 @@ void ROSTriangleCB(hololens_experiment::CommonPointsConstPtr msg){
     pointMat3.at<float>(1) = msg->p3.y;
     pointMat3.at<float>(2) = msg->p3.z;
     ROSVector.push_back(pointMat3);
+
+    cv::Mat pointMat4 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat4.at<float>(0) = msg->p4.x;
+    pointMat4.at<float>(1) = msg->p4.z;
+    pointMat4.at<float>(2) = msg->p4.y;
+    ROSVector.push_back(pointMat4);
+
+    cv::Mat pointMat5 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat5.at<float>(0) = msg->p5.x;
+    pointMat5.at<float>(1) = msg->p5.z;
+    pointMat5.at<float>(2) = msg->p5.y;
+    ROSVector.push_back(pointMat5);
+
+    cv::Mat pointMat6 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat6.at<float>(0) = msg->p6.x;
+    pointMat6.at<float>(1) = msg->p6.z;
+    pointMat6.at<float>(2) = msg->p6.y;
+    ROSVector.push_back(pointMat6);
+
+    cv::Mat pointMat7 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat7.at<float>(0) = msg->p7.x;
+    pointMat7.at<float>(1) = msg->p7.z;
+    pointMat7.at<float>(2) = msg->p7.y;
+    ROSVector.push_back(pointMat7);
+
+    cv::Mat pointMat8 = cv::Mat(3, 1, CV_32F, cv::Scalar(0));
+    pointMat8.at<float>(0) = msg->p8.x;
+    pointMat8.at<float>(1) = msg->p8.z;
+    pointMat8.at<float>(2) = msg->p8.y;
+    ROSVector.push_back(pointMat8);
+
 }
 
 
@@ -119,10 +196,12 @@ int main(int argc, char **argv) {
     ros::Subscriber hololensTriangleSub = node.subscribe("/hololens/commonPoints",1,&hololensTriangleCB);
     ros::Subscriber ROSTriangleSub = node.subscribe("/hololens_experiment/common_points",1,&ROSTriangleCB);
     hololensTriangleTime = ros::Time::now();
+    ros::Time lastTime;
     tf::TransformBroadcaster br;
-    ros::Rate rate(1);
+    ros::Rate rate(100);
     while (ros::ok()) {
-        if(hololensTriangleTime == ROSTriangleTime){
+        if(hololensTriangleTime == ROSTriangleTime && ROSTriangleTime != lastTime){
+            lastTime = ROSTriangleTime;
             std::vector<std::pair<cv::Mat, cv::Mat>> listOfPairs;
             for(int i = 0; i < hololensVector.size(); i++ ){
                 std::pair<cv::Mat,cv::Mat> thisPair;
@@ -149,6 +228,8 @@ int main(int argc, char **argv) {
             // man.setOrigin(-man.getOrigin());
             br.sendTransform(
                 tf::StampedTransform(trans, ROSTriangleTime, "holoWorld", "rosWorld"));
+            rosDebug.clear();
+            holoDebug.clear();
         }
         rate.sleep();
     ros::spinOnce();

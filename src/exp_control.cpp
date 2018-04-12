@@ -19,7 +19,7 @@ int winW = 1200;
 ros::Publisher nextPub;
 ros::Publisher calibratePub;
 std::string type2str(int type);
-
+bool isShown = true;
 int main(int argc, char** argv){
     ros::init(argc, argv, "exp_control");
     ros::NodeHandle node;
@@ -114,14 +114,15 @@ void formDisplay(cv::Mat im1, cv::Mat im2, cv::Mat im3, std::string currMode, st
     dst_roi = fb(cv::Rect(1.5*tW, tH, tW/2, tH/2));
     dst_roi.setTo(cv::Scalar(130,130,130));
     dst_roi = fb(cv::Rect(tW, 1.5*tH, tW/2, tH/2));
-    dst_roi.setTo(cv::Scalar(150,150,150));
+    if(isShown)dst_roi.setTo(cv::Scalar(0,150,150));
+    else dst_roi.setTo(cv::Scalar(150,150,0));
     dst_roi = fb(cv::Rect(1.5*tW, 1.5*tH, tW/2, tH/2));
     dst_roi.setTo(cv::Scalar(180,180,180));
     putText(fb, "Next Stage", cvPoint(tW+30, tH+30),
         cv::FONT_HERSHEY_COMPLEX_SMALL, 1.6, cvScalar(50,20,250), 1, CV_AA);
-    putText(fb, "Repeat Stage", cvPoint(1.5*tW+30, tH+30),
+    putText(fb, "show", cvPoint(1.5*tW+30, tH+30),
         cv::FONT_HERSHEY_COMPLEX_SMALL, 1.6, cvScalar(50,20,250), 1, CV_AA);
-    putText(fb, "Spare Button", cvPoint(tW+30, 1.5*tH+30),
+    putText(fb, "Blank", cvPoint(tW+30, 1.5*tH+30),
         cv::FONT_HERSHEY_COMPLEX_SMALL, 1.6, cvScalar(50,20,250), 1, CV_AA);
     putText(fb, "calibrate", cvPoint(1.5*tW+30, 1.5*tH+30),
         cv::FONT_HERSHEY_COMPLEX_SMALL, 1.6, cvScalar(50,20,250), 1, CV_AA);
@@ -167,18 +168,23 @@ void mouseCB(int event, int x, int y, int flags, void* userdata)
           if(x > 0.75*winW && y > 0.5*winH){
               std::cout << "Repeat Stage" << std::endl;
               std_msgs::String msg;
-              msg.data = "clear";
+              msg.data = "show";
               nextPub.publish(msg);
+              isShown = true;
               return;
           }
           if(x > 0.5*winW && y > 0.75*winH){
-              std::cout << "spare" << std::endl;
+              std::cout << "Repeat Stage" << std::endl;
+              std_msgs::String msg;
+              msg.data = "blank";
+              nextPub.publish(msg);
+              isShown = false;
               return;
           }
           if(x > 0.5*winW && y > 0.5*winH){
               std::cout << "Next Stage" << std::endl;
               std_msgs::String msg;
-              msg.data = "next";
+              msg.data = "nextPath";
               nextPub.publish(msg);
               return;
           }
