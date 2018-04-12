@@ -4,7 +4,7 @@
 <!--============================================================================
     ALTERNATIVE COMPUTER FOR OFFLOAD
 =============================================================================-->
-    <machine name="offload" address="10.0.0.135" env-loader="~/workspace/catkin_ws/devel/env.sh" default="true" />
+    <machine name="offload" user="josh" address="10.0.0.160" env-loader="~/catkin_ws/devel_cb/env.sh" default="false" />
 
 
         <!-- requires the rosbridge package -->
@@ -21,7 +21,7 @@
         <node name="image_to_text_joy" pkg="hololens_vis" type="imageToString" args="/joystickVis /joystickVisText"/>
         <node name="image_to_text_mirror" pkg="hololens_vis" type="imageToString" args="/rear_camera/image_raw /mirrorText"/>
         <node name="triangle_aligner" pkg="hololens_vis" type="pointWorldAlignment"/>
-        <node name="timeKeeper" pkg="hololens_vis" type="timeSync" />
+        <node name="timeKeeper" pkg="hololens_vis" type="timeSync"/>
 
 
 
